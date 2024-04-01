@@ -5,8 +5,7 @@ import (
 	"fmt"
 	"go_api/models"
 	"log"
-	"net/http"
-	
+	"net/http"	
 	_ "github.com/denisenkom/go-mssqldb"
 	"github.com/gin-gonic/gin"
 )
@@ -188,6 +187,64 @@ func GetTransferByOrderId(c *gin.Context, ) {
 	orderID := c.Param("orderid")
 	rows, err := db.Query("SELECT * FROM transfers WHERE order_no = @OrderNo", sql.Named("OrderNo", orderID))
 	
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	var transfers []models.Transfer
+	for rows.Next() {
+		var transfer models.Transfer
+		fmt.Println(rows)
+		err := rows.Scan(
+			&transfer.ID,
+			&transfer.OrderNo,
+			&transfer.Type,
+			&transfer.Category,
+			&transfer.DocumentTypeName,
+			&transfer.SellerNo,
+			&transfer.BuyerNo,
+			&transfer.BuyerName,
+			&transfer.SellerName,
+			&transfer.CategoryCash,
+			&transfer.Bank,
+			&transfer.CashTransfer,
+			&transfer.Cash,
+			&transfer.Discount,
+			&transfer.Retry,
+			&transfer.Status,
+			&transfer.DocumentTypeID,	
+			&transfer.Created_date,
+			&transfer.Updated_date,		
+		)
+		fmt.Printf("1")
+		if err != nil {
+			fmt.Println("2")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		fmt.Printf("3")
+		// Fetch SaleItems for the current transfer
+		saleItems, err := getSaleItems(transfer.ID)
+		fmt.Printf("4")
+		if err != nil {
+			fmt.Println("5")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		fmt.Printf("6")
+		transfer.SaleItems = saleItems
+		transfers = append(transfers, transfer)
+	}
+
+	c.JSON(http.StatusOK, transfers)	
+}
+
+func GetTransferBybuyer_no(c *gin.Context, ) {
+	fmt.Println("on get data by buyer no")
+	buyerID := c.Param("buyerid")
+	rows, err := db.Query("SELECT * FROM transfers WHERE buyer_no = @BuyerNo", sql.Named("BuyerNo", buyerID))	
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
